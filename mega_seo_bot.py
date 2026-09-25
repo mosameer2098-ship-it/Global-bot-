@@ -60,16 +60,6 @@ def send_telegram_alert(message, reply_markup=None):
     except:
         pass
 
-def send_telegram_document(file_path, caption=""):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
-    try:
-        with open(file_path, "rb") as f:
-            files = {"document": f}
-            data = {"chat_id": CHAT_ID, "caption": caption, "parse_mode": "Markdown"}
-            requests.post(url, data=data, files=files, timeout=20)
-    except:
-        pass
-
 def load_database():
     if os.path.exists(DB_FILE):
         try:
@@ -96,7 +86,6 @@ def get_selenium_driver():
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     
-    # Heroku par chromium binary path set karna zaroori hai
     if os.path.exists("/usr/bin/chromium"):
         options.binary_location = "/usr/bin/chromium"
     elif os.path.exists("/usr/bin/chromium-browser"):
@@ -138,7 +127,6 @@ def worker_thread_task(keyword):
         driver.get("https://www.google.com")
         time.sleep(random.uniform(2, 4))
         
-        # Google search input box dhoondhna aur keyword type karna
         search_box = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.NAME, "q"))
         )
@@ -149,9 +137,8 @@ def worker_thread_task(keyword):
         search_box.send_keys(Keys.RETURN)
         time.sleep(random.uniform(3, 5))
         
-        # Search results mein apni website ko dhoondh kar click karna
         found = False
-        for page in range(3): # Pehle 3 pages tak check karega
+        for page in range(3):
             links = driver.find_elements(By.TAG_NAME, "a")
             for link in links:
                 try:
@@ -170,7 +157,6 @@ def worker_thread_task(keyword):
             if found:
                 break
             
-            # Agar pehle page par nahi mila, toh 'Next' page par click karo
             try:
                 next_btn = driver.find_element(By.ID, "pnnext")
                 next_btn.click()
@@ -179,16 +165,13 @@ def worker_thread_task(keyword):
                 break
 
         if found:
-            # Website par real user ki tarah thodi der rukna aur scroll karna
             time.sleep(random.uniform(6, 12))
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
             time.sleep(random.uniform(3, 6))
             
-            # Services page visit karna
             driver.get(SERVICES_URL)
             time.sleep(random.uniform(5, 8))
             
-            # Kabhi-kabhi naya signup bhi simulate karna
             current_time = time.time()
             if current_time - daily_stats["last_signup_time"] >= daily_stats["target_next_signup_gap"]:
                 driver.get(SIGNUP_URL)
@@ -209,7 +192,6 @@ def worker_thread_task(keyword):
                         terms_chk.click()
                         
                     time.sleep(random.uniform(1, 2))
-                    # Submit button click kar sakte hain ya simulate kar sakte hain
                     
                     active_users_db[uname] = {
                         "password": upass, 
@@ -227,7 +209,7 @@ def worker_thread_task(keyword):
     except Exception as e:
         dprint(f"[-] Error in worker task: {e}")
     finally:
-    try:
+        try:
             driver.quit()
         except:
             pass
