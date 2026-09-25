@@ -1,0 +1,37 @@
+{
+  "name": "Selenium SEO Bot",
+  "description": "Selenium based automation bot",
+  "repository": "https://github.com/mosameer2098-ship-it/Global-bot-",
+  "keywords": [
+    "python",
+    "selenium",
+    "telegram",
+    "bot"
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "env": {
+    "BOT_TOKEN": {
+      "description": "Telegram Bot Token",
+      "required": true
+    },
+    "CHAT_ID": {
+      "description": "Telegram Chat ID",
+      "required": true
+    },
+    "TARGET_DOMAIN": {
+      "description": "Target domain",
+      "value": "1xsmmpanel.in",
+      "required": true
+    }
+  },
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  }
+}
