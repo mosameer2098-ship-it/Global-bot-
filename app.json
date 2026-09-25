@@ -1,6 +1,6 @@
 {
   "name": "Selenium SEO Bot",
-  "description": "Selenium based automation bot",
+  "description": "Selenium based automation bot for Google ranking",
   "repository": "https://github.com/mosameer2098-ship-it/Global-bot-",
   "keywords": [
     "python",
@@ -9,6 +9,9 @@
     "bot"
   ],
   "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-apt"
+    },
     {
       "url": "heroku/python"
     }
