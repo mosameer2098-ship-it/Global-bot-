@@ -85,9 +85,8 @@ def get_selenium_driver():
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument("--no-zygote")
-    options.add_argument("--single-process")  # Heroku memory crash aur session exit rokne ke liye
-    options.add_argument("--disable-setuid-sandbox")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--remote-debugging-port=9222")
     options.add_argument("--blink-settings=imagesEnabled=false")
     options.page_load_strategy = 'none'
     
