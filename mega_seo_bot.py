@@ -24,12 +24,12 @@ def dprint(text):
 def send_alert(msg):
     try:
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"}, timeout=10)
-    except:
-        pass
+    except Exception as e:
+        dprint(f"[-] Telegram Alert Error: {e}")
 
 def run_bot():
-    dprint("[+] Pure API SEO Bot started successfully (No Browser/No Crash Mode)!")
-    send_alert("🚀 *API SEO BOT STARTED ON HEROKU* (No Selenium / Zero Crashes)")
+    dprint("[+] Pure API SEO Bot started successfully with Telegram Alerts!")
+    send_alert("🚀 *API SEO BOT STARTED ON HEROKU*\n\n⚡ Zero browser crashes, Telegram live notifications active.")
     
     while True:
         keyword = random.choice(KEYWORDS)
@@ -40,16 +40,22 @@ def run_bot():
             res = requests.get(f"https://www.google.com/search?q={requests.utils.quote(keyword)}", headers=headers, timeout=15)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, 'html.parser')
+                found_target = False
                 for a in soup.find_all('a', href=True):
                     if TARGET_DOMAIN in a['href']:
+                        found_target = True
                         dprint(f"[+] Target found for keyword: {keyword}")
-                        send_alert(f"🎯 *RANK FOUND (API)*\n🔑 Keyword: `{keyword}`")
+                        send_alert(f"🎯 *ORGANIC RANK DETECTED (API)*\n\n🔑 **Keyword:** `{keyword}`\n🌐 **Domain:** `{TARGET_DOMAIN}`")
                         break
+                
+                if not found_target:
+                    dprint(f"[-] Keyword '{keyword}' checked (Target not in top search page right now).")
             
             # Simulate Traffic to Target Domain
             requests.get(f"https://{TARGET_DOMAIN}", headers=headers, timeout=10)
             requests.get(SERVICES_URL, headers=headers, timeout=10)
             dprint("[+] Traffic simulated successfully.")
+            
         except Exception as e:
             dprint(f"[-] Error: {e}")
             
