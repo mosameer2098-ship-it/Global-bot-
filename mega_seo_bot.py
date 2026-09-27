@@ -28,12 +28,12 @@ def send_alert(msg):
         pass
 
 def run_bot():
-    dprint("[+] Lightweight API SEO Bot started successfully!")
-    send_alert("🚀 *API SEO BOT STARTED ON HEROKU* (Zero Browser Crashes)")
+    dprint("[+] Pure API SEO Bot started successfully (No Browser/No Crash Mode)!")
+    send_alert("🚀 *API SEO BOT STARTED ON HEROKU* (No Selenium / Zero Crashes)")
     
     while True:
         keyword = random.choice(KEYWORDS)
-        dprint(f"\n[*] Searching keyword via API: '{keyword}'")
+        dprint(f"\n[*] Querying via API for: '{keyword}'")
         
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         try:
@@ -46,7 +46,7 @@ def run_bot():
                         send_alert(f"🎯 *RANK FOUND (API)*\n🔑 Keyword: `{keyword}`")
                         break
             
-            # Hit target site to simulate traffic
+            # Simulate Traffic to Target Domain
             requests.get(f"https://{TARGET_DOMAIN}", headers=headers, timeout=10)
             requests.get(SERVICES_URL, headers=headers, timeout=10)
             dprint("[+] Traffic simulated successfully.")
