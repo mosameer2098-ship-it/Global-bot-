@@ -90,16 +90,15 @@ def get_selenium_driver():
     options.add_argument("--blink-settings=imagesEnabled=false")
     options.page_load_strategy = 'none'
     
-    # Heroku Chrome binary paths
-    if os.path.exists("/app/.apt/usr/bin/google-chrome"):
-        options.binary_location = "/app/.apt/usr/bin/google-chrome"
+    # Heroku Aptfile paths for Chromium & Chromedriver
+    if os.path.exists("/app/.apt/usr/bin/chromium"):
+        options.binary_location = "/app/.apt/usr/bin/chromium"
+    elif os.path.exists("/app/.apt/usr/bin/chromium-browser"):
+        options.binary_location = "/app/.apt/usr/bin/chromium-browser"
     elif os.path.exists("/usr/bin/chromium"):
         options.binary_location = "/usr/bin/chromium"
-    elif os.path.exists("/usr/bin/chromium-browser"):
-        options.binary_location = "/usr/bin/chromium-browser"
         
-    # Heroku Chromedriver path
-    driver_path = shutil.which("chromedriver") or "/app/.chromedriver/bin/chromedriver"
+    driver_path = shutil.which("chromedriver") or "/app/.apt/usr/bin/chromedriver"
     
     try:
         service = Service(executable_path=driver_path)
