@@ -2,6 +2,7 @@ import time
 import random
 import json
 import os
+import shutil
 import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -84,16 +85,25 @@ def get_selenium_driver():
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--no-zygote")
+    options.add_argument("--single-process")  # Heroku memory crash aur session exit rokne ke liye
+    options.add_argument("--disable-setuid-sandbox")
+    options.add_argument("--blink-settings=imagesEnabled=false")
+    options.page_load_strategy = 'none'
     
-    if os.path.exists("/usr/bin/chromium"):
+    # Heroku Chrome binary paths
+    if os.path.exists("/app/.apt/usr/bin/google-chrome"):
+        options.binary_location = "/app/.apt/usr/bin/google-chrome"
+    elif os.path.exists("/usr/bin/chromium"):
         options.binary_location = "/usr/bin/chromium"
     elif os.path.exists("/usr/bin/chromium-browser"):
         options.binary_location = "/usr/bin/chromium-browser"
         
-    service = Service("/usr/bin/chromedriver") if os.path.exists("/usr/bin/chromedriver") else Service()
+    # Heroku Chromedriver path
+    driver_path = shutil.which("chromedriver") or "/app/.chromedriver/bin/chromedriver"
     
     try:
+        service = Service(executable_path=driver_path)
         driver = webdriver.Chrome(service=service, options=options)
         return driver
     except Exception as e:
@@ -125,9 +135,9 @@ def worker_thread_task(keyword):
 
     try:
         driver.get("https://www.google.com")
-        time.sleep(random.uniform(2, 4))
+        time.sleep(random.uniform(4, 6))
         
-        search_box = WebDriverWait(driver, 10).until(
+        search_box = WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.NAME, "q"))
         )
         for char in keyword:
@@ -135,7 +145,7 @@ def worker_thread_task(keyword):
             time.sleep(random.uniform(0.05, 0.15))
         
         search_box.send_keys(Keys.RETURN)
-        time.sleep(random.uniform(3, 5))
+        time.sleep(random.uniform(4, 6))
         
         found = False
         for page in range(3):
@@ -160,7 +170,7 @@ def worker_thread_task(keyword):
             try:
                 next_btn = driver.find_element(By.ID, "pnnext")
                 next_btn.click()
-                time.sleep(random.uniform(3, 5))
+                time.sleep(random.uniform(4, 6))
             except:
                 break
 
@@ -175,7 +185,7 @@ def worker_thread_task(keyword):
             current_time = time.time()
             if current_time - daily_stats["last_signup_time"] >= daily_stats["target_next_signup_gap"]:
                 driver.get(SIGNUP_URL)
-                time.sleep(random.uniform(2, 4))
+                time.sleep(random.uniform(3, 5))
                 
                 uname, uploader_name, uemail, uphone, upass = generate_real_indian_user()
                 
@@ -248,7 +258,7 @@ def run_selenium_bot():
     listener = Thread(target=telegram_listener_thread, daemon=True)
     listener.start()
     
-    send_telegram_alert("🚀 *SELENIUM SEO BOT STARTED ON HEROKU!*\n\n🌐 Real browser automation is now active for Google ranking.")
+    send_telegram_alert("🚀 *SELENIUM SEO BOT STARTED ON HEROKU*\n\n🌐 Real browser automation worker is now active.")
     
     while True:
         keywords_list = list(DYNAMIC_KEYWORDS_POOL)
