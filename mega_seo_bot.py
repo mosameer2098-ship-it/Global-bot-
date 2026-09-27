@@ -2,26 +2,14 @@ import time
 import random
 import json
 import os
-import shutil
 import requests
-from datetime import datetime
 from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor
 from threading import Thread
-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 BOT_TOKEN = "8394173569:AAFRaOEnIsQPKIurSqkoEh3ATcSQK18PlXA"     
 CHAT_ID = "-1003969385685"     
 TARGET_DOMAIN = "1xsmmpanel.in"               
 SIGNUP_URL = f"https://{TARGET_DOMAIN}/signup"
-LOGIN_URL = f"https://{TARGET_DOMAIN}/login"
 SERVICES_URL = f"https://{TARGET_DOMAIN}/services"
 DB_FILE = "users_db.json"
 
@@ -39,11 +27,7 @@ DYNAMIC_KEYWORDS_POOL = set(TIER1_TARGET_KEYWORDS)
 daily_stats = {
     "total_searches": 0,
     "new_signups": 0,
-    "active_runs": 0,
-    "orders_simulated": 0,
     "keyword_rankings_found": 0,
-    "last_report_time": time.time(),
-    "last_backup_time": time.time(),
     "last_signup_time": 0,
     "target_next_signup_gap": random.randint(60, 300)
 }
@@ -51,11 +35,9 @@ daily_stats = {
 def dprint(text):
     print(text, flush=True)
 
-def send_telegram_alert(message, reply_markup=None):
+def send_telegram_alert(message):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    if reply_markup:
-        payload["reply_markup"] = reply_markup
     try:
         requests.post(url, json=payload, timeout=10)
     except:
@@ -79,39 +61,6 @@ def save_database(db):
 
 active_users_db = load_database()
 
-def get_selenium_driver():
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-software-rasterizer")
-    options.add_argument("--remote-debugging-port=9222")
-    options.add_argument("--blink-settings=imagesEnabled=false")
-    options.page_load_strategy = 'none'
-    
-    # Heroku Aptfile paths for Chromium & Chromedriver
-    if os.path.exists("/app/.apt/usr/bin/chromium"):
-        options.binary_location = "/app/.apt/usr/bin/chromium"
-    elif os.path.exists("/app/.apt/usr/bin/chromium-browser"):
-        options.binary_location = "/app/.apt/usr/bin/chromium-browser"
-    elif os.path.exists("/usr/bin/chromium"):
-        options.binary_location = "/usr/bin/chromium"
-        
-    driver_path = shutil.which("chromedriver") or "/app/.apt/usr/bin/chromedriver"
-    
-    # Auto-Retry loop to prevent intermittent Heroku Chrome instance exit crashes
-    for attempt in range(3):
-        try:
-            service = Service(executable_path=driver_path)
-            driver = webdriver.Chrome(service=service, options=options)
-            return driver
-        except Exception as e:
-            dprint(f"[-] Driver Error (Attempt {attempt+1}/3): {e}")
-            time.sleep(3)
-            
-    return None
-
 def generate_real_indian_user():
     first_names = ["rahul", "amit", "rohit", "vikash", "manish", "sandeep", "ajay", "vijay", "deepak", "kunal", "sachin", "abhishek", "vivek", "pankaj", "sunil", "priya", "pooja", "neha", "divya", "anjali"]
     surnames = ["sharma", "verma", "kumar", "singh", "patel", "gupta", "yadav", "mishra", "shukla", "tiwari", "pandey", "dubey", "jain", "agrawal", "rajput"]
@@ -129,83 +78,51 @@ def generate_real_indian_user():
 def worker_thread_task(keyword):
     global daily_stats
     daily_stats["total_searches"] += 1
-    dprint(f"\n[*] Launching Real Browser for keyword: '{keyword}'...")
+    dprint(f"\n[*] Executing Fast API Request for keyword: '{keyword}'...")
     
-    driver = get_selenium_driver()
-    if not driver:
-        dprint("[-] Skipping search cycle due to driver failure.")
-        return
-
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9,hi;q=0.8"
+    }
+    
     try:
-        driver.get("https://www.google.com")
-        time.sleep(random.uniform(4, 6))
+        # Google Search via Requests
+        search_url = f"https://www.google.com/search?q={requests.utils.quote(keyword)}"
+        response = requests.get(search_url, headers=headers, timeout=15)
         
-        search_box = WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.NAME, "q"))
-        )
-        for char in keyword:
-            search_box.send_keys(char)
-            time.sleep(random.uniform(0.05, 0.15))
-        
-        search_box.send_keys(Keys.RETURN)
-        time.sleep(random.uniform(4, 6))
-        
-        found = False
-        for page in range(3):
-            links = driver.find_elements(By.TAG_NAME, "a")
-            for link in links:
-                try:
-                    href = link.get_attribute("href")
-                    if href and TARGET_DOMAIN in href:
-                        dprint(f"[+] Found target site in search results! Clicking: {href}")
-                        driver.execute_script("arguments[0].scrollIntoView(true);", link)
-                        time.sleep(random.uniform(1, 2))
-                        link.click()
-                        found = True
-                        daily_stats["keyword_rankings_found"] += 1
-                        send_telegram_alert(f"🎯 *ORGANIC CLICK & RANK DETECTED!*\n\n🔑 **Keyword:** `{keyword}`\n🌐 **Domain:** `{TARGET_DOMAIN}`")
-                        break
-                except:
-                    continue
-            if found:
-                break
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            found = False
             
-            try:
-                next_btn = driver.find_element(By.ID, "pnnext")
-                next_btn.click()
-                time.sleep(random.uniform(4, 6))
-            except:
-                break
-
-        if found:
-            time.sleep(random.uniform(6, 12))
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
-            time.sleep(random.uniform(3, 6))
+            for a in soup.find_all('a', href=True):
+                href = a['href']
+                if TARGET_DOMAIN in href:
+                    found = True
+                    daily_stats["keyword_rankings_found"] += 1
+                    dprint(f"[+] Target found in search results for: {keyword}")
+                    send_telegram_alert(f"🎯 *ORGANIC RANK DETECTED (API MODE)*\n\n🔑 **Keyword:** `{keyword}`\n🌐 **Domain:** `{TARGET_DOMAIN}`")
+                    break
             
-            driver.get(SERVICES_URL)
-            time.sleep(random.uniform(5, 8))
+            # Simulate Traffic & Signup if target is checked
+            time.sleep(random.uniform(2, 4))
+            requests.get(f"https://{TARGET_DOMAIN}", headers=headers, timeout=10)
+            requests.get(SERVICES_URL, headers=headers, timeout=10)
             
             current_time = time.time()
             if current_time - daily_stats["last_signup_time"] >= daily_stats["target_next_signup_gap"]:
-                driver.get(SIGNUP_URL)
-                time.sleep(random.uniform(3, 5))
-                
                 uname, uploader_name, uemail, uphone, upass = generate_real_indian_user()
+                signup_payload = {
+                    "username": uname,
+                    "name": uploader_name,
+                    "email": uemail,
+                    "telephone": uphone,
+                    "password": upass,
+                    "password_again": upass,
+                    "terms": "on"
+                }
                 
-                try:
-                    driver.find_element(By.NAME, "username").send_keys(uname)
-                    driver.find_element(By.NAME, "name").send_keys(uploader_name)
-                    driver.find_element(By.NAME, "email").send_keys(uemail)
-                    driver.find_element(By.NAME, "telephone").send_keys(uphone)
-                    driver.find_element(By.NAME, "password").send_keys(upass)
-                    driver.find_element(By.NAME, "password_again").send_keys(upass)
-                    
-                    terms_chk = driver.find_element(By.NAME, "terms")
-                    if not terms_chk.is_selected():
-                        terms_chk.click()
-                        
-                    time.sleep(random.uniform(1, 2))
-                    
+                reg_res = requests.post(SIGNUP_URL, data=signup_payload, headers=headers, timeout=10)
+                if reg_res.status_code == 200 or reg_res.history:
                     active_users_db[uname] = {
                         "password": upass, 
                         "created_at": time.time(), 
@@ -215,17 +132,12 @@ def worker_thread_task(keyword):
                     daily_stats["new_signups"] += 1
                     daily_stats["last_signup_time"] = current_time
                     daily_stats["target_next_signup_gap"] = random.randint(1800, 3600)
-                    send_telegram_alert(f"🚀 *ORGANIC SIGNUP SIMULATED!*\n\n🇮🇳 **User:** `{uploader_name}`")
-                except:
-                    pass
-
+                    send_telegram_alert(f"🚀 *ORGANIC SIGNUP SIMULATED (API)*\n\n🇮🇳 **User:** `{uploader_name}`")
+        else:
+            dprint(f"[-] Search Engine returned status code: {response.status_code}")
+            
     except Exception as e:
-        dprint(f"[-] Error in worker task: {e}")
-    finally:
-        try:
-            driver.quit()
-        except:
-            pass
+        dprint(f"[-] API Worker Error: {e}")
 
 def telegram_listener_thread():
     offset = 0
@@ -243,7 +155,7 @@ def telegram_listener_thread():
                         data_val = cq["data"]
                         if data_val == "get_status":
                             status_text = (
-                                f"🤖 *SELENIUM SEO BOT STATUS*\n\n"
+                                f"🤖 *API SEO BOT STATUS*\n\n"
                                 f"🔑 **Active Keywords:** `{len(DYNAMIC_KEYWORDS_POOL)}`\n"
                                 f"🏆 **Rank Detections:** `{daily_stats['keyword_rankings_found']}`\n"
                                 f"🔍 **Total Searches:** `{daily_stats['total_searches']}`\n"
@@ -256,12 +168,12 @@ def telegram_listener_thread():
             pass
         time.sleep(2)
 
-def run_selenium_bot():
-    dprint(f"[+] Selenium Headless SEO Bot started for: {TARGET_DOMAIN}")
+def run_api_bot():
+    dprint(f"[+] Lightweight Requests SEO Bot started for: {TARGET_DOMAIN}")
     listener = Thread(target=telegram_listener_thread, daemon=True)
     listener.start()
     
-    send_telegram_alert("🚀 *SELENIUM SEO BOT STARTED ON HEROKU*\n\n🌐 Real browser automation worker is now active.")
+    send_telegram_alert("🚀 *LIGHTWEIGHT API SEO BOT STARTED ON HEROKU*\n\n⚡ Zero browser crashes, high performance mode active.")
     
     while True:
         keywords_list = list(DYNAMIC_KEYWORDS_POOL)
@@ -269,9 +181,9 @@ def run_selenium_bot():
         
         worker_thread_task(selected_keyword)
         
-        sleep_duration = random.uniform(30, 60)
-        dprint(f"\n[~] Waiting for {int(sleep_duration)} seconds before next search...")
+        sleep_duration = random.uniform(20, 40)
+        dprint(f"\n[~] Waiting for {int(sleep_duration)} seconds before next API hit...")
         time.sleep(sleep_duration)
 
 if __name__ == "__main__":
-    run_selenium_bot()
+    run_api_bot()
