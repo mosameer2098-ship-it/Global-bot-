@@ -100,13 +100,17 @@ def get_selenium_driver():
         
     driver_path = shutil.which("chromedriver") or "/app/.apt/usr/bin/chromedriver"
     
-    try:
-        service = Service(executable_path=driver_path)
-        driver = webdriver.Chrome(service=service, options=options)
-        return driver
-    except Exception as e:
-        dprint(f"[-] Driver Error: {e}")
-        return None
+    # Auto-Retry loop to prevent intermittent Heroku Chrome instance exit crashes
+    for attempt in range(3):
+        try:
+            service = Service(executable_path=driver_path)
+            driver = webdriver.Chrome(service=service, options=options)
+            return driver
+        except Exception as e:
+            dprint(f"[-] Driver Error (Attempt {attempt+1}/3): {e}")
+            time.sleep(3)
+            
+    return None
 
 def generate_real_indian_user():
     first_names = ["rahul", "amit", "rohit", "vikash", "manish", "sandeep", "ajay", "vijay", "deepak", "kunal", "sachin", "abhishek", "vivek", "pankaj", "sunil", "priya", "pooja", "neha", "divya", "anjali"]
@@ -129,6 +133,7 @@ def worker_thread_task(keyword):
     
     driver = get_selenium_driver()
     if not driver:
+        dprint("[-] Skipping search cycle due to driver failure.")
         return
 
     try:
