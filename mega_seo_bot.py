@@ -23,13 +23,17 @@ def dprint(text):
 
 def send_alert(msg):
     try:
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"}, timeout=10)
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        payload = {"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"}
+        res = requests.post(url, json=payload, timeout=10)
+        # Yeh line Heroku logs me batayegi ki telegram ka message gaya ya koi error aaya
+        dprint(f"[DEBUG] Telegram Response: {res.status_code} - {res.text}")
     except Exception as e:
         dprint(f"[-] Telegram Alert Error: {e}")
 
 def run_bot():
-    dprint("[+] Pure API SEO Bot started successfully with Telegram Alerts!")
-    send_alert("🚀 *API SEO BOT STARTED ON HEROKU*\n\n⚡ Zero browser crashes, Telegram live notifications active.")
+    dprint("[+] Pure API SEO Bot started successfully with Telegram Debug Mode!")
+    send_alert("🚀 *API SEO BOT STARTED ON HEROKU*\n\n⚡ Zero browser crashes, live debugging active.")
     
     while True:
         keyword = random.choice(KEYWORDS)
